@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 11:00:55 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/17 21:30:59 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 20:50:58 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,10 +21,25 @@ int init_dongles(t_data *data)
     {
         data->dongle[i].in_use = 0;
         data->dongle[i].available_at = 0;
+        data->coder[i].request_pending = 0;
+        data->coder[i].dongles_granted = 0;
         if (pthread_mutex_init(&data->dongle[i].mutex, NULL) != 0)
         {
             while (--i >= 0)
+            {
+                pthread_cond_destroy(&data->dongle[i].cond);
                 pthread_mutex_destroy(&data->dongle[i].mutex);
+            }
+            return (0);
+        }
+        if (pthread_cond_init(&data->dongle[i].cond, NULL) != 0)
+        {
+            pthread_mutex_destroy(&data->dongle[i].mutex);
+            while (--i >= 0)
+            {
+                pthread_cond_destroy(&data->dongle[i].cond);
+                pthread_mutex_destroy(&data->dongle[i].mutex);
+            }
             return (0);
         }
         i++;
@@ -32,7 +47,7 @@ int init_dongles(t_data *data)
     return (1);
 }
 
-int	ft_simulation(t_data *data)
+void    init_coder(t_data *data)
 {
 	int	i;
 
@@ -47,5 +62,4 @@ int	ft_simulation(t_data *data)
 		data->coder[i].data = data;
 		i++;
 	}
-	return (1);
 }

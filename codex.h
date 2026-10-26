@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 14:56:21 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/17 21:45:21 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 20:50:58 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
-# include <time.h>
+#include <sys/time.h>
 # include <unistd.h>
 
 
@@ -51,7 +51,6 @@ typedef struct s_dongle
 {
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
-    t_heap          *waiting;
     int             in_use;
     long            available_at;
 }   t_dongle;
@@ -72,8 +71,12 @@ typedef struct s_data
     t_dongle *dongle;
     pthread_mutex_t	state_mutex;
     pthread_mutex_t	log_mutex;
+	t_heap			*waiting;
+	pthread_mutex_t	sch_mutex;
+	pthread_cond_t	sch_cond;
     long			start_time;
     int			stop;
+	unsigned long   request_seq;
 }				t_data;
 
 typedef struct s_coder
@@ -84,13 +87,18 @@ typedef struct s_coder
 	int			complie_c;
 	int 		left_dongel;
 	int 		right_dongel;
+	int	request_pending;
+	int	dongles_granted;
 	t_data		*data;
 }				t_coder;
 
 int     parse_args(int ac, char **av, t_data *data);
-int     ft_simulation(t_data *data);
+void    init_coder(t_data *data);
 int     init_dongles(t_data *data);
 void	cleanup_simulation(t_data *data);
+void    cleanup_scheduler(t_data *data);
+void	cleanup_shared_state(t_data *data);
+
 int		start_threads(t_data *data);
 void	join_threads(t_data *data, int count);
 long	now_ms(void);
@@ -103,5 +111,6 @@ t_heap   *creat_heap(int capacity, t_scheduler scheduler);
 int      push_heap(t_heap *heap, t_request req);
 int      heap_pop(t_heap *heap, t_request *res);
 void     free_heap(t_heap *heap);
-
+int init_scheduler(t_data *data);
+int init_shared_state(t_data *data);
 #endif
