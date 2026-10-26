@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 01:55:31 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 20:50:58 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 21:29:48 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,6 @@ static int	reserve_dongles(t_coder *coder)
 		first = coder->right_dongel;
 		second = coder->left_dongel;
 	}
-	pthread_mutex_lock(&data->sch_mutex);
 	pthread_mutex_lock(&data->dongle[first].mutex);
 	pthread_mutex_lock(&data->dongle[second].mutex);
 	success = can_acquire(coder, now_ms());
@@ -64,8 +63,15 @@ static int	reserve_dongles(t_coder *coder)
 	}
 	pthread_mutex_unlock(&data->dongle[second].mutex);
 	pthread_mutex_unlock(&data->dongle[first].mutex);
-	pthread_mutex_unlock(&data->sch_mutex);
 	return (success);
+}
+
+static int	try_grant_requests(t_data *data)
+{
+	int	g;
+
+	g = 0;
+	return (g);
 }
 
 int	submit_request(t_coder *coder)
@@ -76,46 +82,22 @@ int	submit_request(t_coder *coder)
 
 	data = coder->data;
 	pthread_mutex_lock(&data->sch_mutex);
-	req.coder_id = coder->id;
-	req.deadline = coder->last_compile + data->time_to_burnout;
-	req.sequence = data->request_seq++;
-	success = push_heap(data->waiting, req);
-    coder->request_pending = 1;
-    coder->dongles_granted = 0;
-	pthread_mutex_unlock(&data->sch_mutex);
-	return (success);
-}
-
-int	init_shared_state(t_data *data)
-{
-	if (pthread_mutex_init(&data->state_mutex, NULL) != 0)
-		return (0);
-	if (pthread_mutex_init(&data->log_mutex, NULL) != 0)
+	if (coder->request_pending || coder->dongles_granted)
 	{
-		pthread_mutex_destroy(&data->state_mutex);
+		pthread_mutex_unlock(&data->sch_mutex);
 		return (0);
 	}
-	data->stop = 0;
-	return (1);
-}
-
-int init_scheduler(t_data *data)
-{
-    data->waiting = creat_heap(data->number_of_coders, data->scheduler);
-    if (!data->waiting)
-        return 0;
-    if (pthread_mutex_init(&data->sch_mutex, NULL) != 0)
-    {
-        free_heap(data->waiting);
-        data->waiting = NULL;
-        return (0);
-    }
-    if (pthread_cond_init(&data->sch_cond, NULL) != 0)
-    {
-        pthread_mutex_destroy(&data->sch_mutex);
-        free_heap(data->waiting);
-        data->waiting = NULL;
-        return (0);
-    }
-    return (1);
+	req.coder_id = coder->id;
+	req.deadline = coder->last_compile + data->time_to_burnout;
+	req.sequence = data->request_seq;
+	success = push_heap(data->waiting, req);
+	if (success)
+	{
+		data->request_seq++;
+		coder->request_pending = 1;
+		coder->dongles_granted = 0;
+		pthread_cond_signal(&data->sch_cond);
+	}
+	pthread_mutex_unlock(&data->sch_mutex);
+	return (success);
 }
