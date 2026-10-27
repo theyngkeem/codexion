@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 02:26:36 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 20:50:58 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 23:11:12 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,4 +51,10 @@ void	log_state(t_coder *coder, char *message)
 	pthread_mutex_unlock(&data->log_mutex);
 }
 
+long	now_ms(void)
+{
+	struct timeval	tv;
 
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec * 1000L + tv.tv_usec / 1000L);
+}

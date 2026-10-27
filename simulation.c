@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 11:00:55 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 21:17:22 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 23:14:36 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,4 +97,11 @@ int	init_shared_state(t_data *data)
 	}
 	data->stop = 0;
 	return (1);
+}
+
+void	count_compile(t_coder *coder)
+{
+	pthread_mutex_lock(&coder->data->state_mutex);
+	coder->complie_c++;
+	pthread_mutex_unlock(&coder->data->state_mutex);
 }

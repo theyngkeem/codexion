@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 14:56:21 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 20:50:58 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 23:30:30 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,6 @@ typedef struct s_request
 	unsigned long	sequence;
 }	t_request;
 
-
 typedef struct s_heap
 {
     t_request       *arr;
@@ -46,7 +45,6 @@ typedef struct s_heap
     t_scheduler     scheduler;
 }   t_heap;
 
-
 typedef struct s_dongle
 {
     pthread_mutex_t mutex;
@@ -54,8 +52,6 @@ typedef struct s_dongle
     int             in_use;
     long            available_at;
 }   t_dongle;
-
-
 
 typedef struct s_data
 {
@@ -98,7 +94,6 @@ int     init_dongles(t_data *data);
 void	cleanup_simulation(t_data *data);
 void    cleanup_scheduler(t_data *data);
 void	cleanup_shared_state(t_data *data);
-
 int		start_threads(t_data *data);
 void	join_threads(t_data *data, int count);
 long	now_ms(void);
@@ -111,6 +106,10 @@ t_heap   *creat_heap(int capacity, t_scheduler scheduler);
 int      push_heap(t_heap *heap, t_request req);
 int      heap_pop(t_heap *heap, t_request *res);
 void     free_heap(t_heap *heap);
-int init_scheduler(t_data *data);
-int init_shared_state(t_data *data);
+int 	init_scheduler(t_data *data);
+int 	init_shared_state(t_data *data);
+void	release_dongles(t_coder *coder);
+int		wait_for_dongles(t_coder *coder);
+void	*monitor_routine(void *arg);
+
 #endif

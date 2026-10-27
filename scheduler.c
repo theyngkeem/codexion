@@ -6,72 +6,71 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 01:55:31 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 21:29:48 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/26 23:08:26 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codex.h"
 
-static int	dongle_available(t_dongle *dongle, long current_time)
-{
-	return (!dongle->in_use
-		&& current_time >= dongle->available_at);
-}
-
-static int	can_acquire(t_coder *coder, long current_time)
-{
-	t_data		*data;
-	t_dongle	*left;
-	t_dongle	*right;
-
-	data = coder->data;
-	if (coder->left_dongel == coder->right_dongel)
-		return (0);
-	left = &data->dongle[coder->left_dongel];
-	right = &data->dongle[coder->right_dongel];
-	if (!dongle_available(left, current_time))
-		return (0);
-	if (!dongle_available(right, current_time))
-		return (0);
-	return (1);
-}
-
 static int	reserve_dongles(t_coder *coder)
 {
-	t_data		*data;
-	int			first;
-	int			second;
-	int			success;
+	t_data	*data;
+	t_dongle	*first;
+	t_dongle	*second;
+	int		a;
+	int		b;
+	int		success;
+	long	time;
 
 	data = coder->data;
-	first = coder->left_dongel;
-	second = coder->right_dongel;
-	if (first == second)
+	a = coder->left_dongel;
+	b = coder->right_dongel;
+	if (a == b)
 		return (0);
-	if (first > second)
+	if (a > b)
 	{
-		first = coder->right_dongel;
-		second = coder->left_dongel;
+		a = coder->right_dongel;
+		b = coder->left_dongel;
 	}
-	pthread_mutex_lock(&data->dongle[first].mutex);
-	pthread_mutex_lock(&data->dongle[second].mutex);
-	success = can_acquire(coder, now_ms());
+	first = &data->dongle[a];
+	second = &data->dongle[b];
+	pthread_mutex_lock(&first->mutex);
+	pthread_mutex_lock(&second->mutex);
+	time = now_ms();
+	success = (!first->in_use && !second->in_use
+			&& time >= first->available_at
+			&& time >= second->available_at);
 	if (success)
 	{
-		data->dongle[first].in_use = 1;
-		data->dongle[second].in_use = 1;
+		first->in_use = 1;
+		second->in_use = 1;
 	}
-	pthread_mutex_unlock(&data->dongle[second].mutex);
-	pthread_mutex_unlock(&data->dongle[first].mutex);
+	pthread_mutex_unlock(&second->mutex);
+	pthread_mutex_unlock(&first->mutex);
 	return (success);
 }
 
 static int	try_grant_requests(t_data *data)
 {
-	int	g;
+	t_request	req;
+	t_coder		*coder;
+	int			granted;
 
-	g = 0;
-	return (g);
+	granted = 0;
+	while (data->waiting->size > 0)
+	{
+		req = data->waiting->arr[0];
+		coder = &data->coder[req.coder_id - 1];
+		if (!reserve_dongles(coder))
+			break ;
+		heap_pop(data->waiting, &req);
+		coder->request_pending = 0;
+		coder->dongles_granted = 1;
+		granted++;
+	}
+	if (granted)
+		pthread_cond_broadcast(&data->sch_cond);
+	return (granted);
 }
 
 int	submit_request(t_coder *coder)
@@ -96,8 +95,61 @@ int	submit_request(t_coder *coder)
 		data->request_seq++;
 		coder->request_pending = 1;
 		coder->dongles_granted = 0;
-		pthread_cond_signal(&data->sch_cond);
+		try_grant_requests(data);
 	}
 	pthread_mutex_unlock(&data->sch_mutex);
 	return (success);
+}
+
+void	release_dongles(t_coder *coder)
+{
+	t_data	*data;
+	int		a;
+	int		b;
+	long	cooldown;
+
+	data = coder->data;
+	a = coder->left_dongel;
+	b = coder->right_dongel;
+	if (a > b)
+	{
+		a = coder->right_dongel;
+		b = coder->left_dongel;
+	}
+	if (a == b)
+		return ;
+	pthread_mutex_lock(&data->sch_mutex);
+	pthread_mutex_lock(&data->dongle[a].mutex);
+	pthread_mutex_lock(&data->dongle[b].mutex);
+	cooldown = now_ms() + data->dongle_cooldown;
+	data->dongle[a].in_use = 0;
+	data->dongle[b].in_use = 0;
+	data->dongle[a].available_at = cooldown;
+	data->dongle[b].available_at = cooldown;
+	pthread_mutex_unlock(&data->dongle[b].mutex);
+	pthread_mutex_unlock(&data->dongle[a].mutex);
+	coder->dongles_granted = 0;
+	pthread_cond_broadcast(&data->sch_cond);
+	pthread_mutex_unlock(&data->sch_mutex);
+}
+
+int	wait_for_dongles(t_coder *coder)
+{
+	t_data	*data;
+	int		granted;
+
+	data = coder->data;
+	if (!submit_request(coder))
+		return (0);
+	while (!simulation_stopped(data))
+	{
+		pthread_mutex_lock(&data->sch_mutex);
+		try_grant_requests(data);
+		granted = coder->dongles_granted;
+		pthread_mutex_unlock(&data->sch_mutex);
+		if (granted)
+			return (1);
+		usleep(500);
+	}
+	return (0);
 }
