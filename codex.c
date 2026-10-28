@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 09:21:16 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 23:11:19 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/28 05:37:01 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,9 +64,20 @@ static void	set_start_time(t_data *data)
 
 static int	run_simulation(t_data *data)
 {
+	pthread_t	monitor;
+
 	set_start_time(data);
-	if (!start_threads(data))
+	if (pthread_create(&monitor, NULL, monitor_routine, data) != 0)
 		return (0);
+	if (!start_threads(data))
+	{
+		pthread_mutex_lock(&data->state_mutex);
+		data->stop = 1;
+		pthread_mutex_unlock(&data->state_mutex);
+		pthread_join(monitor, NULL);
+		return (0);
+	}
+	pthread_join(monitor, NULL);
 	join_threads(data, data->number_of_coders);
 	return (1);
 }

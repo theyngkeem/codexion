@@ -31,6 +31,51 @@ static int	higher_priority(t_heap *heap, t_request a, t_request b)
 	return (a.coder_id < b.coder_id);
 }
 
+int	heap_remove_at(t_heap *heap, int index, t_request *removed)
+{
+	int			i;
+	int			parent;
+	int			child;
+	t_request	tmp;
+
+	if (!heap || !removed || index < 0 || index >= heap->size)
+		return (0);
+	*removed = heap->arr[index];
+	heap->size--;
+	if (index == heap->size)
+		return (1);
+	heap->arr[index] = heap->arr[heap->size];
+	i = index;
+	while (i > 0)
+	{
+		parent = (i - 1) / 2;
+		if (!higher_priority(heap, heap->arr[i], heap->arr[parent]))
+			break ;
+		tmp = heap->arr[i];
+		heap->arr[i] = heap->arr[parent];
+		heap->arr[parent] = tmp;
+		i = parent;
+	}
+	while (1)
+	{
+		child = 2 * i + 1;
+		if (child >= heap->size)
+			break ;
+		if (child + 1 < heap->size
+			&& higher_priority(heap, heap->arr[child + 1],
+				heap->arr[child]))
+			child++;
+		if (!higher_priority(heap, heap->arr[child], heap->arr[i]))
+			break ;
+		tmp = heap->arr[i];
+		heap->arr[i] = heap->arr[child];
+		heap->arr[child] = tmp;
+		i = child;
+	}
+	return (1);
+}
+
+
 int	push_heap(t_heap *heap, t_request req)
 {
 	int			i;

@@ -6,7 +6,7 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 14:56:21 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 23:30:30 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/28 05:45:25 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,7 +100,7 @@ long	now_ms(void);
 int		init_shared_state(t_data *data);
 int		simulation_stopped(t_data *data);
 int		wait_ms(t_data *data, long duration);
-void	log_state(t_coder *coder, const char *message);
+void	log_state(t_coder *coder, char *message);
 void	count_compile(t_coder *coder);
 t_heap   *creat_heap(int capacity, t_scheduler scheduler);
 int      push_heap(t_heap *heap, t_request req);
@@ -111,5 +111,5 @@ int 	init_shared_state(t_data *data);
 void	release_dongles(t_coder *coder);
 int		wait_for_dongles(t_coder *coder);
 void	*monitor_routine(void *arg);
-
+int	heap_remove_at(t_heap *heap, int index, t_request *removed);
 #endif

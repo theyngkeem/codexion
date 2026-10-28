@@ -6,11 +6,20 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 01:55:31 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/26 23:08:26 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/28 05:48:43 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codex.h"
+
+static int	request_before(t_data *data, t_request a, t_request b)
+{
+	if (data->scheduler == EDF && a.deadline != b.deadline)
+		return (a.deadline < b.deadline);
+	if (a.sequence != b.sequence)
+		return (a.sequence < b.sequence);
+	return (a.coder_id < b.coder_id);
+}
 
 static int	reserve_dongles(t_coder *coder)
 {
@@ -50,23 +59,55 @@ static int	reserve_dongles(t_coder *coder)
 	return (success);
 }
 
+static int	has_priority_conflict(t_data *data, t_request req)
+{
+	t_request	other;
+	t_coder		*a;
+	t_coder		*b;
+	int			i;
+
+	a = &data->coder[req.coder_id - 1];
+	i = 0;
+	while (i < data->waiting->size)
+	{
+		other = data->waiting->arr[i];
+		b = &data->coder[other.coder_id - 1];
+		if (other.coder_id != req.coder_id
+			&& request_before(data, other, req)
+			&& (a->left_dongel == b->left_dongel
+				|| a->left_dongel == b->right_dongel
+				|| a->right_dongel == b->left_dongel
+				|| a->right_dongel == b->right_dongel))
+			return (1);
+		i++;
+	}
+	return (0);
+}
+
 static int	try_grant_requests(t_data *data)
 {
 	t_request	req;
 	t_coder		*coder;
+	int			i;
 	int			granted;
 
+	i = 0;
 	granted = 0;
-	while (data->waiting->size > 0)
+	while (i < data->waiting->size)
 	{
-		req = data->waiting->arr[0];
+		req = data->waiting->arr[i];
 		coder = &data->coder[req.coder_id - 1];
-		if (!reserve_dongles(coder))
-			break ;
-		heap_pop(data->waiting, &req);
-		coder->request_pending = 0;
-		coder->dongles_granted = 1;
-		granted++;
+		if (!has_priority_conflict(data, req)
+			&& reserve_dongles(coder))
+		{
+			heap_remove_at(data->waiting, i, &req);
+			coder->request_pending = 0;
+			coder->dongles_granted = 1;
+			granted++;
+			i = 0;
+		}
+		else
+			i++;
 	}
 	if (granted)
 		pthread_cond_broadcast(&data->sch_cond);
