@@ -6,10 +6,11 @@
 /*   By: yaarab <yaarab@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/26 01:55:31 by yaarab            #+#    #+#             */
-/*   Updated: 2026/10/28 05:48:43 by yaarab           ###   ########.fr       */
+/*   Updated: 2026/10/28 05:58:27 by yaarab           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "codex.h"
 #include "codex.h"
 
 static int	request_before(t_data *data, t_request a, t_request b)
@@ -128,7 +129,9 @@ int	submit_request(t_coder *coder)
 		return (0);
 	}
 	req.coder_id = coder->id;
+	pthread_mutex_lock(&data->state_mutex);
 	req.deadline = coder->last_compile + data->time_to_burnout;
+	pthread_mutex_unlock(&data->state_mutex);
 	req.sequence = data->request_seq;
 	success = push_heap(data->waiting, req);
 	if (success)
@@ -136,7 +139,7 @@ int	submit_request(t_coder *coder)
 		data->request_seq++;
 		coder->request_pending = 1;
 		coder->dongles_granted = 0;
-		try_grant_requests(data);
+		pthread_cond_signal(&data->sch_cond);
 	}
 	pthread_mutex_unlock(&data->sch_mutex);
 	return (success);
