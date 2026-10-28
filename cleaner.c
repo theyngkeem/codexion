@@ -14,26 +14,25 @@
 
 void	cleanup_simulation(t_data *data)
 {
-	int i;
-	
-	i = 0;
+	int	i;
 
+	i = 0;
 	while (i < data->number_of_coders)
 	{
-        pthread_cond_destroy(&data->dongle[i].cond);
+		pthread_cond_destroy(&data->dongle[i].cond);
 		pthread_mutex_destroy(&data->dongle[i].mutex);
 		i++;
-	}   
+	}
 	free(data->dongle);
-    free(data->coder);
+	free(data->coder);
 }
 
-void    cleanup_scheduler(t_data *data)
+void	cleanup_scheduler(t_data *data)
 {
-    pthread_cond_destroy(&data->sch_cond);
-    pthread_mutex_destroy(&data->sch_mutex);
-    free_heap(data->waiting);
-    data->waiting = NULL;
+	pthread_cond_destroy(&data->sch_cond);
+	pthread_mutex_destroy(&data->sch_mutex);
+	free_heap(data->waiting);
+	data->waiting = NULL;
 }
 
 void	cleanup_shared_state(t_data *data)

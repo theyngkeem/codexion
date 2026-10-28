@@ -23,7 +23,8 @@ static int	check_coders(t_data *data)
 	current = now_ms();
 	while (i < data->number_of_coders)
 	{
-		if (current - data->coder[i].last_compile
+		if (data->coder[i].complie_c < data->number_of_compiles_req
+			&& current - data->coder[i].last_compile
 			>= data->time_to_burnout)
 			return (data->coder[i].id);
 		if (data->coder[i].complie_c >= data->number_of_compiles_req)
@@ -41,8 +42,11 @@ void	*monitor_routine(void *arg)
 	int		result;
 
 	data = (t_data *)arg;
+	if (!wait_for_start(data))
+		return (NULL);
 	while (!simulation_stopped(data))
 	{
+		pthread_mutex_lock(&data->log_mutex);
 		pthread_mutex_lock(&data->state_mutex);
 		result = check_coders(data);
 		if (result != 0)
@@ -50,11 +54,10 @@ void	*monitor_routine(void *arg)
 		pthread_mutex_unlock(&data->state_mutex);
 		if (result > 0)
 		{
-			pthread_mutex_lock(&data->log_mutex);
 			printf("%ld %d burned out\n",
 				now_ms() - data->start_time, result);
-			pthread_mutex_unlock(&data->log_mutex);
 		}
+		pthread_mutex_unlock(&data->log_mutex);
 		if (result != 0)
 			break ;
 		usleep(500);

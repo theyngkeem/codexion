@@ -58,3 +58,20 @@ long	now_ms(void)
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000L + tv.tv_usec / 1000L);
 }
+
+int	wait_for_start(t_data *data)
+{
+	int	started;
+	int	stopped;
+
+	while (1)
+	{
+		pthread_mutex_lock(&data->state_mutex);
+		started = (data->start_time != 0);
+		stopped = data->stop;
+		pthread_mutex_unlock(&data->state_mutex);
+		if (started || stopped)
+			return (!stopped);
+		usleep(500);
+	}
+}

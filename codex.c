@@ -53,6 +53,7 @@ static void	set_start_time(t_data *data)
 {
 	int	i;
 
+	pthread_mutex_lock(&data->state_mutex);
 	data->start_time = now_ms();
 	i = 0;
 	while (i < data->number_of_coders)
@@ -60,13 +61,13 @@ static void	set_start_time(t_data *data)
 		data->coder[i].last_compile = data->start_time;
 		i++;
 	}
+	pthread_mutex_unlock(&data->state_mutex);
 }
 
 static int	run_simulation(t_data *data)
 {
 	pthread_t	monitor;
 
-	set_start_time(data);
 	if (pthread_create(&monitor, NULL, monitor_routine, data) != 0)
 		return (0);
 	if (!start_threads(data))
@@ -77,6 +78,7 @@ static int	run_simulation(t_data *data)
 		pthread_join(monitor, NULL);
 		return (0);
 	}
+	set_start_time(data);
 	pthread_join(monitor, NULL);
 	join_threads(data, data->number_of_coders);
 	return (1);
